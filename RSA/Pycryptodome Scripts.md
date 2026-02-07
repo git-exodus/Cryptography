@@ -2,28 +2,26 @@
 pip install pycryptodome
 
 Filename: id_rsa.pub
-Outputs: n and e  (Variables)
 ```
+```
+
+```
+#!/usr/bin/env python3
+
 from Crypto.PublicKey import RSA
 
-# Open the public key file and import it
-with open("id_rsa.pub", "rb") as f:
-    key = RSA.import_key(f.read())
-    # Print the modulus (n) and the public exponent (e)
-    print("n =", key.n)
-    print("e =", key.e)
-```
-
-```
-from gmpy2 import isqrt
-from math import lcm
+from gmpy2 import isqrt, invert, lcm
 
 def factorize(n):
+    # since even nos. are always divisible by 2, one of the factors will
+    # always be 2
     if (n & 1) == 0:
         return (n/2, 2)
 
+    # isqrt returns the integer square root of n
     a = isqrt(n)
 
+    # if n is a perfect square the factors will be ( sqrt(n), sqrt(n) )
     if a * a == n:
         return a, a
 
@@ -36,31 +34,34 @@ def factorize(n):
 
     return a + b, a - b
 
-print(factorize("Replace Here"))
-```
 
-```
-from Crypto.PublicKey import RSA
-from Crypto.Util.number import inverse
+def get_private_key(e, p, q):
+    return invert(e, lcm(p - 1, q - 1))
 
-# Replace these with your actual values!
-n = ...  # The modulus you found earlier
-e = ...  # The public exponent (usually 65537)
-p = ...  # The first prime factor you found
-q = ...  # The second prime factor you found
 
-# Calculate phi, which is a necessary step for finding 'd'
-phi = (p - 1) * (q - 1)
 
-# Calculate 'd', the modular multiplicative inverse of e mod phi
-d = inverse(e, phi)
+with open('id_rsa.pub', 'r') as file:
+    public_key = RSA.import_key(file.read())
 
-# Construct the full private key from all its components
-key = RSA.construct((n, e, d, p, q))
+bit_size = public_key.size_in_bits()
+n = public_key.n
+x = str(n)[-10:]
 
-# Save our shiny new private key to a file
-with open("private_key.pem", "wb") as f:
-    f.write(key.export_key("PEM"))
+e = 65537
+p, q = factorize(n)
 
-print("Private key 'private_key.pem' has been generated successfully!")
+d = get_private_key(e, p, q)
+
+private_key = RSA.construct((n ,e , int(d)))
+
+with open('id_rsa', 'wb') as file:
+    file.write(private_key.export_key('PEM'))
+
+print(f"The size in bits of the public key is: {bit_size}")
+print(f"The last 10 digits of the public key are: {x}")
+print(f"The difference between p and q is: {p - q}")
+
+
+print(f"The value of the private key is {d}")
+print("You can find your key in this directory.")
 ```
